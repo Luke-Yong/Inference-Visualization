@@ -396,6 +396,9 @@ async function refreshStatus() {
       cb.parentElement.classList.remove("disabled");
       cb.parentElement.title = "Load weights saved from the Training page";
     } else {
+      // No weights yet -> the "checked by default" intent can't apply.
+      cb.checked = false;
+      cb.disabled = true;
       cb.parentElement.classList.add("disabled");
       cb.parentElement.title = "No trained weights yet — run training first";
     }
@@ -439,7 +442,6 @@ window.addEventListener("DOMContentLoaded", () => {
   $("resetBtn").addEventListener("click", resetToBest);
   $("useTrained").addEventListener("change", run);
   $("prompt").addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
-  refreshStatus();
   $("prevBtn").addEventListener("click", () => { stopPlay(); if (STEP > 0) { STEP--; renderStep(); } });
   $("nextBtn").addEventListener("click", () => { stopPlay(); if (STEP < DATA.steps.length - 1) { STEP++; renderStep(); } });
   $("playBtn").addEventListener("click", () => { timer ? stopPlay() : play(); });
@@ -450,5 +452,7 @@ window.addEventListener("DOMContentLoaded", () => {
       ? "Show model weight tables &#9662;" : "Hide model weight tables &#9652;";
   });
 
-  run(); // auto-run with defaults on load
+  // Resolve trained-weight availability FIRST, so the "Use trained weights"
+  // default only applies when weights actually exist, then run once on load.
+  (async () => { await refreshStatus(); run(); })();
 });

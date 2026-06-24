@@ -96,6 +96,9 @@ class MoELM:
 
         self._pos = np.array([positional_encoding(p, d_model) for p in range(max_len)])
 
+        # Weight of the auxiliary load-balancing loss (0 = off). Set per run.
+        self.aux_alpha = 0.0
+
     def _prefix(self, l):
         return f"L{l}_"
 
@@ -177,6 +180,15 @@ class MoELM:
             dZ = dHd * (ex["Z"] > 0)
             g[p + f"e{e}_W1"] += H1.T @ dZ
             dH1 += dZ @ P[p + f"e{e}_W1"].T
+
+        # ---- auxiliary load-balancing gradient ----
+        # Balance loss per layer: L = E * Σ_e P_e^2, with P_e = mean_t G[t,e].
+        # It is minimized (=1) when router probability is spread uniformly, and
+        # large when a few experts dominate. dL/dG[t,e] = (2*alpha*E/T) * P_e
+        # (same for every token row), injected before the softmax Jacobian.
+        if self.aux_alpha > 0:
+            Pe = G.mean(axis=0)                       # (E,)
+            dG = dG + (2.0 * self.aux_alpha * E / T) * Pe[None, :]
         dR = G * (dG - np.sum(dG * G, axis=1, keepdims=True))   # softmax jac
         g[p + "W_router"] += H1.T @ dR
         dH1 += dR @ P[p + "W_router"].T
@@ -239,7 +251,30 @@ class MoELM:
         for t in range(T):
             g["embed"][ids_arr[t]] += dH[t]
 
+        # Add the auxiliary load-balancing loss value to the reported objective
+        # (its gradient was already injected per layer in _layer_backward).
+        if self.aux_alpha > 0:
+            bal = 0.0
+            for lc in cache["layer_caches"]:
+                Pe = lc["G"].mean(axis=0)
+                bal += self.num_experts * float(np.sum(Pe * Pe))
+            loss += self.aux_alpha * bal
+
         return loss, g
+
+    def balance_factor(self, sequences):
+        """Mean over layers of E·Σ_e P_e^2 (1.0 = perfectly balanced routing,
+        up to num_experts = fully collapsed onto one expert)."""
+        if not sequences:
+            return 1.0
+        total = 0.0
+        for ids in sequences:
+            cache = {}
+            self.forward(ids, cache)
+            per = [self.num_experts * float(np.sum(lc["G"].mean(axis=0) ** 2))
+                   for lc in cache["layer_caches"]]
+            total += sum(per) / len(per)
+        return total / len(sequences)
 
     # -------------------------- generation / metrics -------------------------- #
     def greedy_continue(self, prompt_ids, n=4, eos_id=None, max_ctx=None):
@@ -345,7 +380,13 @@ class MoELM:
         return {
             "embed": _round(self.P["embed"]),
             "W_router": _round(self.P["L0_W_router"]),   # layer 0 router
+            "experts": [                                 # layer 0 experts
+                {"W1": _round(self.P[f"L0_e{e}_W1"]),
+                 "W2": _round(self.P[f"L0_e{e}_W2"])}
+                for e in range(self.num_experts)
+            ],
             "expert_usage": [round(x, 4) for x in usage],
+            "balance": round(self.balance_factor(sequences), 4),  # 1.0 = balanced
             "samples": samples,
             "metric": metric,
         }
@@ -400,7 +441,7 @@ DATASET_DEFAULTS = {
 
 def train_stream(dataset_name="word", epochs=60, lr=0.05, optimizer="adam",
                  seed=42, num_snapshots=8, d_model=None, num_layers=None,
-                 slice_chars=3000, block_size=32):
+                 slice_chars=3000, block_size=32, balance_alpha=0.0):
     """Run training as a GENERATOR, yielding progress events as they happen.
 
     Event types (each is a plain dict, JSON-serializable):
@@ -424,6 +465,7 @@ def train_stream(dataset_name="word", epochs=60, lr=0.05, optimizer="adam",
         cfg["num_layers"] = int(num_layers)
     max_len = max(64, data.block_len + 4)
     model = MoELM(vocab_size=len(data.vocab), max_len=max_len, seed=int(seed), **cfg)
+    model.aux_alpha = max(0.0, float(balance_alpha))   # MoE load-balancing weight
 
     opt = Adam(model.P, lr=float(lr)) if optimizer == "adam" else None
     sgd_lr = float(lr)
@@ -435,7 +477,7 @@ def train_stream(dataset_name="word", epochs=60, lr=0.05, optimizer="adam",
 
     params = {"epochs": epochs, "lr": float(lr), "optimizer": optimizer,
               "seed": int(seed), "d_model": cfg["d_model"],
-              "num_layers": cfg["num_layers"]}
+              "num_layers": cfg["num_layers"], "balance_alpha": model.aux_alpha}
 
     yield {"type": "start", "mode": data.mode, "dataset": data.name,
            "config": model.config(), "vocab": list(data.vocab),

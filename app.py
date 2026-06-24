@@ -72,6 +72,7 @@ def train_stream():
         num_layers=data.get("num_layers") or None,
         slice_chars=int(data.get("slice_chars", 3000)),
         block_size=int(data.get("block_size", 32)),
+        balance_alpha=float(data.get("balance_alpha", 0.0)),
     )
 
     def generate():

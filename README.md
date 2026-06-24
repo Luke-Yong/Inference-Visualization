@@ -32,8 +32,10 @@ Step through a real forward pass, one stage at a time:
 
 Multi-layer models show one **attention + MoE block per layer**, stacked. Every
 vector/matrix is a blue/red heatmap. You can step/play through the trace, tune
-the sampling controls, inspect the raw weight tables, and tick **“Use trained
-weights”** to run the model you trained.
+the sampling controls, and inspect the raw weight tables. **“Use trained
+weights”** is **on by default when a trained model exists** (it falls back to
+the untrained demo model otherwise), so the page runs the model you trained out
+of the box.
 
 ### Training page (`/train`)
 Watch the same model actually **learn**, live:
@@ -42,15 +44,20 @@ Watch the same model actually **learn**, live:
   backpropagation** (Adam/SGD), streamed over **Server-Sent Events** so the
   **loss curve, progress bar, and sample generations animate in real time**.
 - Scrub through checkpoints to see the **loss drop**, **next-char accuracy
-  climb**, the **embedding heatmap drift** from its random start, and the
-  **router/expert-usage specialize**.
+  climb**, the **embedding heatmap drift** from its random start, the
+  **per-expert W1/W2 weight tables diverge/specialize**, and the
+  **router/expert-usage** rebalance.
+- Optional **auxiliary load-balancing loss** (slider **α**, default 0 = off): a
+  standard MoE trick that pushes the router to spread tokens evenly across
+  experts. A live **balance factor** (1.0 = perfectly even) lets you watch the
+  usage bars even out as you raise α — at a small cost to accuracy.
 - Two datasets: a tiny **word-level corpus** (maximally legible tables) and
   **character-level Tiny Shakespeare** (real English; downloaded on first run,
   cached locally, with an offline fallback).
 - Tune dataset, optimizer, learning rate, epochs, model width (`d_model`),
-  depth (`layers`), context window, etc. **“Reset to best”** restores the tuned
-  defaults; results are **cached per browser session** so navigating between
-  pages doesn’t retrain.
+  depth (`layers`), context window, load-balance α, etc. **“Reset to best”**
+  restores the tuned defaults; results are **cached per browser session** so
+  navigating between pages doesn’t retrain.
 
 ---
 
@@ -128,7 +135,9 @@ Then open **http://127.0.0.1:5000**.
   downloads ~1 MB of text once, then caches it under `data/`)
 
 Typical flow: open **/train**, watch it learn (or press **Train model**), then
-open **/** and tick **“Use trained weights”** to run the model you just trained.
+open **/** — it **uses your trained weights by default**, so you can start
+generating right away (untick **“Use trained weights”** to compare the untrained
+model).
 
 > The tuned defaults (d_model 32 · 2 layers · lr 0.03 · **170 epochs**) reach
 > **~88% next-char accuracy** on Tiny Shakespeare and take ~2–3 minutes on the

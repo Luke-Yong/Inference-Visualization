@@ -77,6 +77,9 @@
       <label>Init seed <b id="seedVal">42</b>
         <input id="seed" type="range" min="0" max="50" step="1" value="42" />
       </label>
+      <label title="Auxiliary MoE load-balancing loss weight. 0 = off; higher pushes the router to spread tokens evenly across experts.">Load&#8209;balance &alpha; <b id="balanceVal">off</b>
+        <input id="balance_alpha" type="range" min="0" max="0.5" step="0.05" value="0" />
+      </label>
       <button id="trainBtn" class="run">Train model</button>
       <button id="resetBtn" class="reset-btn" title="Reset all controls to the best Tiny Shakespeare settings">Reset to best</button>
     </div>
@@ -136,6 +139,14 @@
         <div id="usageBars" class="gate-bar-wrap"></div>
       </section>
     </div>
+
+    <section class="card">
+      <h2>Expert weight tables <span class="badge" id="expertBadge"></span></h2>
+      <p class="desc">The 4 experts of layer 0 (each a 2&#8209;layer MLP: <code>W1 → ReLU → W2</code>).
+        They start as different random matrices and <b>specialize</b> as training proceeds &mdash;
+        scrub the checkpoints to watch them diverge.</p>
+      <div id="expertHeat" class="experts-grid"></div>
+    </section>
   </main>
 
   <footer class="foot">

@@ -17,8 +17,9 @@ const CACHE_KEY = "moe_train_result_v1";
 /* Best Tiny Shakespeare settings (from the parameter sweep). d_model/num_layers
  * stay 0 = "auto", which resolves to the dataset defaults (32 / 2 layers). */
 const BEST_DEFAULTS = {
-  dataset: "shakespeare", optimizer: "adam", lr: 0.03, epochs: 120,
+  dataset: "shakespeare", optimizer: "adam", lr: 0.03, epochs: 170,
   d_model: 0, num_layers: 0, slice_chars: 2500, block_size: 32, seed: 42,
+  balance_alpha: 0,
 };
 
 function cacheResult() {
@@ -201,10 +202,42 @@ function renderHeatmaps(c) {
     c.W_router.map((_, i) => "d" + i), c.expert_usage.map((_, i) => "E" + i));
 
   const maxU = Math.max(...c.expert_usage, 0.001);
-  $("usageBars").innerHTML = c.expert_usage.map((u, i) =>
+  let bars = c.expert_usage.map((u, i) =>
     `<div class="gate-row"><span class="ename">expert ${i}</span>` +
     `<div class="gate-track"><div class="gate-fill" style="width:${(u / maxU * 100).toFixed(1)}%"></div></div>` +
     `<span>${u.toFixed(3)}</span></div>`).join("");
+  if (c.balance != null) {
+    const E = DATA.config.num_experts;
+    const pct = Math.max(0, Math.min(100,
+      (1 - (c.balance - 1) / (E - 1)) * 100)).toFixed(0);  // 100% = perfectly even
+    bars += `<div class="balance-row" title="E·Σ P_e² — 1.0 = perfectly even routing, up to ${E} = collapsed onto one expert">` +
+      `balance factor <b>${c.balance.toFixed(3)}</b> ` +
+      `<span class="muted">(${pct}% even · 1.0 = ideal)</span></div>`;
+  }
+  $("usageBars").innerHTML = bars;
+
+  // per-expert W1/W2 weight tables (layer 0). Guard for older cached results.
+  const ex = $("expertHeat");
+  if (ex) {
+    if (c.experts && c.experts.length) {
+      const d = DATA.config.d_model, h = DATA.config.expert_hidden;
+      $("expertBadge").textContent = `layer 0 · ${c.experts.length} experts · W1 ${d}×${h} · W2 ${h}×${d}`;
+      const dCols = Array.from({ length: d }, (_, i) => "d" + i);
+      ex.innerHTML = c.experts.map((e, i) => {
+        const sel = c.expert_usage[i] === Math.max(...c.expert_usage);
+        return `<div class="expert-block${sel ? " top" : ""}">
+          <p class="sub">Expert ${i}${sel ? " · most used" : ""} · gate ${(c.expert_usage[i]).toFixed(3)}</p>
+          <div class="expert-mats">
+            <div><span class="mat-cap">W1 (in → hidden)</span><div class="heat-scroll">${matrix(e.W1, dCols)}</div></div>
+            <div><span class="mat-cap">W2 (hidden → out)</span><div class="heat-scroll">${matrix(e.W2, null, dCols)}</div></div>
+          </div>
+        </div>`;
+      }).join("");
+    } else {
+      ex.innerHTML = `<p class="desc">Expert weights unavailable for this (older cached) result — press <b>Train model</b> to regenerate.</p>`;
+      $("expertBadge").textContent = "";
+    }
+  }
 }
 
 /* ---------- one checkpoint (interactive view, post-training) ---------- */
@@ -347,6 +380,7 @@ async function train() {
         num_layers: parseInt($("num_layers").value, 10), // 0 => auto
         slice_chars: parseInt($("slice_chars").value, 10),
         block_size: parseInt($("block_size").value, 10),
+        balance_alpha: parseFloat($("balance_alpha").value),
       }),
     });
     if (!res.ok || !res.body) throw new Error("HTTP " + res.status);
@@ -443,6 +477,11 @@ window.addEventListener("DOMContentLoaded", () => {
   };
   bindAuto("d_model", "dmodelVal");
   bindAuto("num_layers", "layersVal");
+
+  // load-balance alpha: 0 means "off"
+  const balFn = () => { const v = parseFloat($("balance_alpha").value);
+    $("balanceVal").textContent = v === 0 ? "off" : v.toFixed(2); };
+  $("balance_alpha").addEventListener("input", balFn); balFn();
 
   $("dataset").addEventListener("change", syncDatasetUI);
   syncDatasetUI();
