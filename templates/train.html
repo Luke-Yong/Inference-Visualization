@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Training Visualizer · MoE</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/train.css') }}" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="title">
+      <h1>Training Visualizer</h1>
+      <span class="subtitle">corpus &rarr; forward &rarr; cross&#8209;entropy loss &rarr; backprop &rarr; gradient step (Adam/SGD)</span>
+    </div>
+    <nav class="nav">
+      <a class="nav-link" href="/">Inference</a>
+      <a class="nav-link active" href="/train">Training</a>
+    </nav>
+    <div class="arch-pill">real backprop&nbsp;&middot;&nbsp;pure numpy&nbsp;&middot;&nbsp;soft routing</div>
+  </header>
+
+  <section class="intro card">
+    <h2>How this model learns</h2>
+    <p class="desc">
+      The same MoE network from the inference page is trained here with
+      <b>real hand&#8209;written backpropagation</b> (pure numpy &mdash; no PyTorch).
+      It learns <b>next&#8209;token prediction</b>: gradients of the cross&#8209;entropy loss
+      flow back through unembed &rarr; MoE &rarr; attention &rarr; embedding, and an
+      optimizer nudges every weight to reduce the loss.
+    </p>
+    <p class="desc">
+      <b>Tiny Shakespeare</b> is real English tokenized <b>per character</b>, so the
+      vocabulary is just the unique characters (~50) &mdash; small enough to keep the
+      weight tables legible, while still being genuine English the model can learn
+      structure from. Two standard training&#8209;time choices: the whole sequence is
+      processed at once with a causal mask (the KV cache is only an inference
+      speed&#8209;up), and the router uses <b>soft routing</b> (all experts) so it is
+      differentiable; inference then keeps the top&#8209;2.
+      <br/><em>Initializing all weights to 0 would prevent learning (symmetry &amp; dead
+      gradients), so we start from small random values and watch them change.</em>
+    </p>
+  </section>
+
+  <section class="controls">
+    <div class="ctrl-row sliders">
+      <label>Dataset
+        <select id="dataset">
+          <option value="shakespeare" selected>Tiny Shakespeare (char)</option>
+          <option value="word">Toy word corpus</option>
+        </select>
+      </label>
+      <label>Optimizer
+        <select id="optimizer">
+          <option value="adam" selected>Adam</option>
+          <option value="sgd">SGD</option>
+        </select>
+      </label>
+      <label>Learning rate <b id="lrVal">0.03</b>
+        <input id="lr" type="range" min="0.005" max="0.5" step="0.005" value="0.03" />
+      </label>
+      <label>Epochs <b id="epochsVal">120</b>
+        <input id="epochs" type="range" min="5" max="200" step="5" value="120" />
+      </label>
+      <label>Model width d_model <b id="dmodelVal">auto</b>
+        <input id="d_model" type="range" min="0" max="48" step="8" value="0" />
+      </label>
+      <label>Layers (depth) <b id="layersVal">auto</b>
+        <input id="num_layers" type="range" min="0" max="3" step="1" value="0" />
+      </label>
+      <label class="char-only">Text slice (chars) <b id="sliceVal">2500</b>
+        <input id="slice_chars" type="range" min="500" max="6000" step="500" value="2500" />
+      </label>
+      <label class="char-only">Context window <b id="blockVal">32</b>
+        <input id="block_size" type="range" min="8" max="48" step="4" value="32" />
+      </label>
+      <label>Init seed <b id="seedVal">42</b>
+        <input id="seed" type="range" min="0" max="50" step="1" value="42" />
+      </label>
+      <button id="trainBtn" class="run">Train model</button>
+      <button id="resetBtn" class="reset-btn" title="Reset all controls to the best Tiny Shakespeare settings">Reset to best</button>
+    </div>
+    <div id="trainStatus" class="trained-banner hidden"></div>
+
+    <div id="progressWrap" class="progress-wrap hidden">
+      <div class="progress-row">
+        <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+        <div class="progress-text" id="progressText">starting…</div>
+      </div>
+      <div class="live-loss" id="liveLoss"></div>
+    </div>
+  </section>
+
+  <section class="card datasetinfo">
+    <h2>Dataset <span class="badge" id="dsBadge"></span></h2>
+    <p class="desc" id="dsDesc"></p>
+    <div id="dsBody"></div>
+  </section>
+
+  <main id="results" class="results hidden">
+    <section class="card">
+      <div class="metric-head">
+        <div class="metric-big"><span id="metricVal">–</span><small id="metricLabel"></small></div>
+        <div class="metric-detail" id="metricDetail"></div>
+      </div>
+      <h2>Loss curve <span class="badge" id="lossBadge"></span></h2>
+      <p class="desc">Average cross&#8209;entropy per epoch. Lower = better next&#8209;token prediction. Click the chart to scrub through training.</p>
+      <div id="lossChart" class="chart"></div>
+    </section>
+
+    <section class="stepper">
+      <button id="prevCk">&larr; Prev</button>
+      <button id="playCk">&#9654; Play</button>
+      <button id="nextCk">Next &rarr;</button>
+      <input id="ckSlider" type="range" min="0" max="0" value="0" />
+      <div class="step-label" id="ckLabel"></div>
+    </section>
+
+    <section class="card">
+      <h2>Generation at this checkpoint</h2>
+      <p class="desc" id="samplesDesc"></p>
+      <div id="samples" class="samples"></div>
+    </section>
+
+    <div class="grid cols-2">
+      <section class="card">
+        <h2>Embedding table <span class="badge" id="embedBadge"></span></h2>
+        <p class="desc">Each row is a token's learned vector. Watch the values move away from their random start as similar tokens drift together.</p>
+        <div id="embedHeat" class="heat-scroll"></div>
+      </section>
+      <section class="card">
+        <h2>Router &amp; expert usage</h2>
+        <p class="desc">Router weights and the average gate each expert receives across the corpus &mdash; the router learns to specialize experts.</p>
+        <div id="routerHeat" class="heat-scroll"></div>
+        <p class="sub" style="margin-top:14px">Average expert usage</p>
+        <div id="usageBars" class="gate-bar-wrap"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="foot">
+    After training, the weights are saved automatically. Open the
+    <a href="/">Inference page</a> and tick <em>"Use trained weights"</em> to run the
+    network you just trained &mdash; for the char model, type any text and watch it
+    continue character by character.
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/train.js') }}"></script>
+</body>
+</html>

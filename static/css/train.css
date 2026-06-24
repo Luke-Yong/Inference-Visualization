@@ -1,0 +1,125 @@
+/* Training page specific styles (loaded after style.css) */
+
+.intro { margin: 18px 24px 0; }
+.intro h2 { margin: 0 0 8px; font-size: 16px; }
+.intro .desc { font-size: 13px; }
+.intro em { color: var(--amber); font-style: normal; }
+
+.controls select {
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  padding: 7px 10px; border-radius: 7px; font-size: 13px;
+}
+.controls .sliders { align-items: flex-end; }
+.reset-btn {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+  padding: 11px 16px; border-radius: 8px; cursor: pointer; font-size: 14px;
+}
+.reset-btn:hover { border-color: var(--accent-2); color: var(--accent-2); }
+
+.corpus { margin: 18px 24px 0; }
+.corpus-list { display: flex; flex-direction: column; gap: 8px; }
+.corpus-line { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.corpus-line .tok {
+  padding: 4px 9px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--panel-2); font-family: monospace; font-size: 12px;
+}
+.corpus-line .tok.special { color: var(--accent-2); }
+
+.results { padding: 18px 24px 40px; display: flex; flex-direction: column; gap: 18px; }
+.results .card { margin: 0; }
+
+/* loss chart */
+.chart { width: 100%; }
+.chart svg { width: 100%; height: 260px; display: block; }
+.axis-line { stroke: var(--border); stroke-width: 1; }
+.grid-line { stroke: #1d2530; stroke-width: 1; }
+.loss-path { fill: none; stroke: var(--accent); stroke-width: 2; }
+.loss-area { fill: rgba(88,166,255,.10); }
+.ck-marker { stroke: var(--green); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.ck-dot { fill: var(--green); }
+.chart-label { fill: var(--muted); font-size: 11px; font-family: monospace; }
+
+.stepper select { display: none; }
+#ckSlider { flex: 1; accent-color: var(--green); }
+.stepper button { background: var(--panel-2); }
+
+/* sample predictions */
+.samples { display: flex; flex-direction: column; gap: 8px; }
+.sample-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  border: 1px solid var(--border); border-radius: 9px; padding: 10px 14px; background: var(--panel-2);
+}
+.sample-row .prompt { font-family: monospace; color: var(--muted); }
+.sample-row .gen { font-family: monospace; }
+.sample-row .gen b { color: var(--text); }
+.sample-row .verdict {
+  margin-left: auto; font-family: monospace; font-size: 12px; padding: 3px 10px; border-radius: 6px;
+}
+.sample-row .verdict.ok { background: rgba(63,185,80,.16); color: #9fe7ab; border: 1px solid var(--green); }
+.sample-row .verdict.no { background: rgba(248,81,73,.14); color: #ffb3ae; border: 1px solid var(--neg); }
+.prob-mini { width: 120px; height: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.prob-mini > div { height: 100%; background: var(--green); }
+
+.results .gate-row .ename { color: var(--muted); }
+
+/* dataset info */
+.datasetinfo { margin: 18px 24px 0; }
+.ds-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+.text-preview {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px;
+  color: #c2ccd6; max-height: 180px; overflow: auto; white-space: pre-wrap; margin: 0;
+}
+
+/* metric headline */
+.metric-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 10px; flex-wrap: wrap; }
+.metric-big { display: flex; align-items: baseline; gap: 8px; }
+.metric-big span { font-size: 34px; font-weight: 800; color: var(--green); font-family: monospace; }
+.metric-big small { color: var(--muted); font-size: 13px; }
+.metric-detail { color: var(--muted); font-size: 13px; }
+
+/* char sample rows */
+.sample-row.char { gap: 8px; align-items: baseline; }
+.sample-row.char .seed {
+  font-family: monospace; color: var(--accent); white-space: pre;
+  background: rgba(88,166,255,.10); padding: 2px 6px; border-radius: 5px;
+}
+.sample-row.char .arrow { color: var(--muted); }
+.sample-row.char .cont {
+  font-family: monospace; color: #9fe7ab; white-space: pre-wrap; word-break: break-word; flex: 1;
+}
+
+/* scrollable heatmaps for taller (char) vocab */
+.heat-scroll { max-height: 420px; overflow: auto; }
+
+/* live training progress */
+.progress-wrap { margin-top: 14px; }
+.progress-row { display: flex; align-items: center; gap: 14px; }
+.progress-bar {
+  flex: 1; height: 14px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width .15s linear;
+}
+.progress-text {
+  font-family: monospace; font-size: 13px; color: var(--accent);
+  white-space: nowrap; min-width: 130px; text-align: right;
+}
+.live-loss {
+  margin-top: 8px; font-family: monospace; font-size: 13px; color: var(--muted);
+}
+.live-loss b { color: var(--green); }
+.live-pill {
+  display: inline-block; font-size: 11px; font-family: monospace;
+  color: var(--accent-2); background: rgba(210,168,255,.14);
+  border: 1px solid var(--accent-2); border-radius: 999px; padding: 1px 8px;
+  margin-left: 8px; animation: pulse 1.2s ease-in-out infinite;
+}
+/* the live (still-training) loss line is dashed + animated */
+.loss-path.live { stroke-dasharray: 5 4; }
+.live-dot { fill: var(--accent-2); }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+.live-dot { animation: pulse 1s ease-in-out infinite; }

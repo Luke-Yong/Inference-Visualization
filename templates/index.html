@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Inference Visualizer · MoE</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="title">
+      <h1>LLM Inference Visualizer</h1>
+      <span class="subtitle">prompt &rarr; tokens &rarr; attention (KV cache) &rarr; Mixture&#8209;of&#8209;Experts &rarr; sampling</span>
+    </div>
+    <nav class="nav">
+      <a class="nav-link active" href="/">Inference</a>
+      <a class="nav-link" href="/train">Training</a>
+    </nav>
+    <div class="arch-pill" id="archPill">1&nbsp;layer&nbsp;&middot;&nbsp;d=8&nbsp;&middot;&nbsp;2&nbsp;heads&nbsp;&middot;&nbsp;4&nbsp;experts&nbsp;(top&#8209;2)</div>
+  </header>
+
+  <section class="controls">
+    <div class="ctrl-row">
+      <label class="prompt-field">
+        <span>Prompt</span>
+        <input id="prompt" type="text" value="To be, or not to be" autocomplete="off" />
+      </label>
+      <label class="trained-toggle" title="Load weights saved from the Training page">
+        <input id="useTrained" type="checkbox" />
+        <span>Use trained weights</span>
+      </label>
+      <button id="runBtn" class="run">Run inference</button>
+    </div>
+    <div id="trainedBanner" class="trained-banner hidden"></div>
+
+    <div class="ctrl-row sliders">
+      <label>Temperature <b id="tempVal">0.80</b>
+        <input id="temperature" type="range" min="0.1" max="2" step="0.05" value="0.8" />
+      </label>
+      <label>top&#8209;k <b id="topkVal">10</b>
+        <input id="top_k" type="range" min="0" max="25" step="1" value="10" />
+      </label>
+      <label>top&#8209;p <b id="toppVal">0.90</b>
+        <input id="top_p" type="range" min="0.1" max="1" step="0.05" value="0.9" />
+      </label>
+      <label>Max tokens <b id="maxVal">10</b>
+        <input id="max_tokens" type="range" min="1" max="16" step="1" value="10" />
+      </label>
+      <label>Seed <b id="seedVal">0</b>
+        <input id="seed" type="range" min="0" max="50" step="1" value="0" />
+      </label>
+      <button id="resetBtn" class="reset-btn" title="Reset sampling controls to the best settings and re-run">Reset to best</button>
+    </div>
+  </section>
+
+  <section class="output-bar">
+    <div class="seq" id="sequence"><span class="placeholder">Run inference to see the generated sequence.</span></div>
+  </section>
+
+  <section class="stepper">
+    <button id="prevBtn" disabled>&larr; Prev</button>
+    <button id="playBtn" disabled>&#9654; Play</button>
+    <button id="nextBtn" disabled>Next &rarr;</button>
+    <div class="step-track" id="stepTrack"></div>
+    <div class="step-label" id="stepLabel">No run yet</div>
+  </section>
+
+  <main id="stage" class="stage">
+    <div class="hint">Set a prompt and the sampling controls, then press <b>Run inference</b>.
+       Step through each stage of the forward pass with the controls above.</div>
+  </main>
+
+  <section class="weights">
+    <button id="toggleWeights" class="collapse-btn">Show model weight tables &#9662;</button>
+    <div id="weightsBody" class="weights-body hidden"></div>
+  </section>
+
+  <footer class="foot">
+    Toy model with random (untrained) weights &mdash; output is not coherent on purpose.
+    The point is to expose the real <em>mechanics</em> of transformer / MoE inference.
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
