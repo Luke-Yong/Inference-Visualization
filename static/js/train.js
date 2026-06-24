@@ -397,19 +397,10 @@ function restoreFromCache() {
   if (!cached || !cached.checkpoints || !cached.checkpoints.length) return false;
   DATA = cached;
 
-  // Reflect the cached run's settings back into the controls.
-  const p = DATA.params || {};
-  setControl("dataset", DATA.dataset);
-  setControl("optimizer", p.optimizer);
-  setControl("lr", p.lr);
-  setControl("epochs", p.epochs);
-  setControl("seed", p.seed);
-  setControl("d_model", p.d_model);
-  setControl("num_layers", p.num_layers);
-  if (DATA.info && DATA.mode === "char") {
-    setControl("slice_chars", DATA.info.slice_chars);
-    setControl("block_size", DATA.info.block_size);
-  }
+  // Show the cached trained result, but keep the controls on the BEST defaults
+  // (not the cached run's params), so the page always loads ready-to-train at
+  // the best settings. Pressing "Train model" then uses the best config.
+  for (const [id, val] of Object.entries(BEST_DEFAULTS)) setControl(id, val);
   syncDatasetUI();
 
   CK = DATA.checkpoints.length - 1;
@@ -430,7 +421,7 @@ function resetToBest() {
   const status = $("trainStatus");
   status.className = "trained-banner ok";
   status.innerHTML = "&#10003; Controls reset to the <b>best Tiny Shakespeare</b> settings " +
-    "(d_model 32 · 2 layers · lr 0.03 · 120 epochs). Press <b>Train model</b> to run.";
+    "(d_model 32 · 2 layers · lr 0.03 · 170 epochs). Press <b>Train model</b> to run.";
 }
 
 window.addEventListener("DOMContentLoaded", () => {

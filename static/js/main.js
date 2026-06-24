@@ -223,7 +223,6 @@ function renderStep() {
     html += renderSampling(step.sampling);
   }
   stage.innerHTML = html;
-  stage.scrollIntoView({ behavior: "smooth", block: "start" });
 
   updateStepper();
   updateSequence();

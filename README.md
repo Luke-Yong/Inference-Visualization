@@ -130,16 +130,20 @@ Then open **http://127.0.0.1:5000**.
 Typical flow: open **/train**, watch it learn (or press **Train model**), then
 open **/** and tick **“Use trained weights”** to run the model you just trained.
 
-> Char-level training on Tiny Shakespeare takes ~1–2 minutes on the dev server;
-> it’s streamed (you watch progress) and cached per session.
+> The tuned defaults (d_model 32 · 2 layers · lr 0.03 · **170 epochs**) reach
+> **~88% next-char accuracy** on Tiny Shakespeare and take ~2–3 minutes on the
+> dev server; training is streamed (you watch progress) and cached per session.
+> Press **“Reset to best”** to restore these defaults anytime.
 
 ---
 
 ## Notes & honest limitations
 
 - Output is **not** coherent prose — the model is deliberately tiny so the
-  tables stay readable. Char-level on Tiny Shakespeare learns spelling/letter
-  statistics and pseudo-Shakespearean fragments, not real sentences.
+  tables stay readable. Even at ~88% next-char accuracy, char-level on Tiny
+  Shakespeare learns spelling/letter statistics and pseudo-Shakespearean
+  fragments, not real sentences (next-*char* accuracy is much easier than
+  producing meaningful text).
 - Expert **specialization is mild** with only 4 tiny experts on a small
   dataset; the *mechanism* is faithful, the *degree* is limited by size.
 - The bundled dev server is for local use, not production.
