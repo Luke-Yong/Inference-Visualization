@@ -1,0 +1,19 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Project-generated artifacts (recreated by running the app)
+data/                 # downloaded Tiny Shakespeare cache
+trained_weights.npz   # produced by the Training page
+trained_meta.json     # produced by the Training page
+
+# Editor / OS noise
+.idea/
+.DS_Store
+Thumbs.db
